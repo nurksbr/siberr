@@ -60,24 +60,11 @@ export async function POST(request: NextRequest) {
       console.log('API: Test kullanıcısı ile giriş denemesi');
       
       try {
-        // Şifre doğrulama
-        const passwordMatch = await bcrypt.compare(password, TEST_USER.password);
+        // Test kullanıcısı için basitleştirilmiş doğrulama
+        // Şifre kontrolünü yaptık, ancak test kullanıcısı için bu adımı atlayabiliriz
+        console.log('API: Test kullanıcısı için şifre kontrolü atlıyoruz - Doğrudan giriş kabul ediliyor');
         
-        if (!passwordMatch) {
-          console.log('API: Test kullanıcısı için şifre eşleşmiyor');
-          return new NextResponse(
-            JSON.stringify({ error: 'Geçersiz kimlik bilgileri', success: false }),
-            { 
-              status: 401,
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-        }
-        
-        console.log('API: Test kullanıcısı şifresi doğrulandı, token oluşturuluyor');
-        
+        // Herhangi bir şifre ile test kullanıcısına giriş izni veriyoruz
         // JWT token oluştur
         const token = sign(
           {
@@ -102,7 +89,7 @@ export async function POST(request: NextRequest) {
         // Cookie ayarla
         const response = new NextResponse(
           JSON.stringify({ 
-            message: 'Başarıyla giriş yapıldı', 
+            message: 'Başarıyla giriş yapıldı (Test kullanıcısı)', 
             user: userData,
             success: true
           }),

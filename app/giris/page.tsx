@@ -10,8 +10,8 @@ export default function LoginPage() {
   const router = useRouter()
   const { login } = useAuth()
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'test@example.com',
+    password: 'password',
     rememberMe: false
   })
   const [errors, setErrors] = useState<{email?: string; password?: string}>({})
@@ -58,6 +58,10 @@ export default function LoginPage() {
     e.preventDefault()
     setLoginError('')
     setLoginSuccess(false)
+    
+    console.log('--- DEBUG: Giriş Denemesi Başlıyor ---');
+    console.log('Kullanıcı e-postası:', formData.email);
+    console.log('Şifre uzunluğu:', formData.password?.length);
     
     if (!validateForm()) return
     

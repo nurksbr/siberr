@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['placehold.co', 'images.unsplash.com'],
+    domains: ['placehold.co', 'images.unsplash.com', 'img.youtube.com'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -11,6 +11,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'img.youtube.com',
       },
     ],
     dangerouslyAllowSVG: true,

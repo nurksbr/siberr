@@ -37,9 +37,66 @@ interface Course {
   imageUrl: string;
   category: string;
   level: 'Başlangıç' | 'Orta' | 'İleri';
+  videoUrl?: string; // Eğitim videosu URL'si
 }
 
+// Video playlist kursu
+const videoCourse: Course = {
+  id: 'video-course-1',
+  title: 'Siber Güvenlik Eğitim Serisi',
+  description: 'Kapsamlı siber güvenlik eğitim serisi. Temel kavramlardan ileri tekniklere kadar siber güvenlik konularını öğrenin.',
+  progress: 30,
+  imageUrl: 'https://placehold.co/600x400/111827/60A5FA?text=Siber+Güvenlik+Eğitimi',
+  category: 'Video Eğitim Serisi',
+  level: 'Başlangıç',
+  videoUrl: 'https://youtube.com/playlist?list=PLGWmuqrfJZRtILSgqBaa7Ur1IegoQCrDU&si=cifoQL9s1hfHRH0v'
+};
+
+// Video ID listesi ve başlıkları
+const videoItems = [
+  { 
+    id: 'L_boJQDwV8U', 
+    title: 'Siber Güvenlik Temelleri',
+    description: 'Temel kavramlar ve giriş düzeyi bilgiler',
+    category: 'Temel Eğitim',
+    progress: 75
+  },
+  { 
+    id: 'nt0eQ1aKuGI', 
+    title: 'Siber Güvenlik Nasıl Öğrenilir',
+    description: 'Eğitim ve kariyer yol haritası',
+    category: 'Kariyer Rehberi',
+    progress: 30
+  },
+  { 
+    id: 'yYJ6yQ-M7Ek', 
+    title: 'Yazılım Güvenliği',
+    description: 'Güvenli kod geliştirme prensipleri',
+    category: 'Geliştirme',
+    progress: 45
+  },
+  { 
+    id: 'qRxeL5C2tU8', 
+    title: 'Ağ Güvenliği',
+    description: 'Ağ güvenliği prensipleri ve tehditler',
+    category: 'Ağ Güvenliği',
+    progress: 10
+  },
+  { 
+    id: 'xR3UG6zMWU0', 
+    title: 'Sosyal Mühendislik',
+    description: 'Sosyal mühendislik saldırıları ve korunma yöntemleri',
+    category: 'Tehdit Analizi',
+    progress: 60
+  },
+];
+
+// Video ID'lerini ayrı bir değişkende saklayalım
+const videoIds = videoItems.map(item => item.id);
+
 const dummyCourses: Course[] = [
+  // Videoyu ilk sıraya ekle
+  videoCourse,
   {
     id: 'course-1',
     title: 'Siber Güvenlik Temelleri',
@@ -139,42 +196,143 @@ export default function CoursesPage() {
       
       <main className="bg-gray-900 min-h-screen pb-16">
         <div className="container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold text-white mb-8">Eğitimlerim</h1>
+          <h1 className="text-3xl font-bold text-cyan-400 mb-8">Eğitimlerim</h1>
+          
+          {/* Video Eğitim Serisi */}
+          <section className="mb-12">            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videoItems.map((video) => (
+                <a 
+                  key={video.id}
+                  href={`https://www.youtube.com/watch?v=${video.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"  
+                  className="block"
+                >
+                  {/* Kurs Kartı */}
+                  <div className="bg-[#111827] rounded-lg overflow-hidden border border-gray-800 h-full flex flex-col relative group hover:border-cyan-700 transition-all duration-300">
+                    {/* Üst kısım - Video Önizleme */}
+                    <div className="relative pt-[60%]">
+                      <Image 
+                        src={`https://img.youtube.com/vi/${video.id}/mqdefault.jpg`}
+                        alt={video.title}
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#111827] to-transparent opacity-50"></div>
+                      <div className="absolute bottom-0 left-0 w-full p-4">
+                        <h3 className="text-2xl font-bold text-cyan-400 mb-1">{video.title}</h3>
+                      </div>
+                    </div>
+                    
+                    {/* Alt kısım - Detaylar */}
+                    <div className="p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs text-gray-400">{video.category}</span>
+                          <span className="text-xs font-semibold text-cyan-400">{video.progress}% Tamamlandı</span>
+                        </div>
+                        
+                        <p className="text-gray-300 text-sm mb-4 line-clamp-2">{video.description}</p>
+                        
+                        <div className="w-full bg-gray-700 rounded-full h-2 mb-4">
+                          <div 
+                            className="bg-cyan-500 h-2 rounded-full transition-all duration-300 ease-in-out" 
+                            style={{ width: `${video.progress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      <button className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md transition-colors">
+                        Kursa Devam Et
+                      </button>
+                    </div>
+                  </div>
+                </a>
+              ))}
+              
+              {/* YouTube Oynatma Listesi Kartı */}
+              <a 
+                href={videoCourse.videoUrl}
+                target="_blank"
+                rel="noopener noreferrer"  
+                className="block"
+              >
+                <div className="bg-[#111827] rounded-lg overflow-hidden border border-gray-800 h-full flex flex-col relative group hover:border-red-700 transition-all duration-300">
+                  <div className="relative pt-[60%] bg-gray-800">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center">
+                        <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-0 left-0 w-full p-4">
+                      <h3 className="text-2xl font-bold text-red-400 mb-1">Siber Güvenlik Eğitim Serisi</h3>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs text-gray-400">YouTube Eğitim Serisi</span>
+                      </div>
+                      
+                      <p className="text-gray-300 text-sm mb-4">Tüm siber güvenlik eğitim serisi. Temel kavramlardan ileri tekniklere kadar siber güvenlik konularını kapsayan kapsamlı YouTube oynatma listesi.</p>
+                    </div>
+                    
+                    <button className="w-full py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"></path>
+                      </svg>
+                      Tüm Oynatma Listesini Görüntüle
+                    </button>
+                  </div>
+                </div>
+              </a>
+            </div>
+          </section>
           
           {/* Aktif kurslar */}
           <section className="mb-12">
             <h2 className="text-2xl font-semibold text-cyan-400 mb-6">Aktif Kurslarım</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dummyCourses.filter(course => course.progress > 0 && course.progress < 100).map((course, index) => (
+              {dummyCourses.filter(course => course.id !== 'video-course-1' && course.progress > 0 && course.progress < 100).map((course, index) => (
                 <div 
                   key={course.id}
-                  className="bg-gray-800 rounded-lg overflow-hidden shadow-md h-full flex flex-col relative group hover:shadow-xl transition duration-300"
+                  className="bg-[#111827] rounded-lg overflow-hidden border border-gray-800 h-full flex flex-col relative group hover:border-cyan-700 transition-all duration-300"
                 >
                   <div className="relative pt-[60%]">
                     <Image 
                       src={course.imageUrl}
                       alt={course.title}
-                      className="object-cover rounded-t-lg transition-transform duration-300 group-hover:scale-105"
+                      className="object-cover transition-transform duration-300 group-hover:scale-105"
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority={index < 4}
                     />
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs text-gray-400">{course.category}</span>
-                      <span className="text-xs font-semibold text-cyan-400">{course.progress}% Tamamlandı</span>
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#111827] to-transparent opacity-50"></div>
+                    <div className="absolute bottom-0 left-0 w-full p-4">
+                      <h3 className="text-2xl font-bold text-cyan-400 mb-1">{course.title}</h3>
                     </div>
-                    
-                    <h3 className="text-xl font-bold text-white mb-2">{course.title}</h3>
-                    <p className="text-gray-400 mb-4">{course.description}</p>
-                    
-                    <div className="w-full bg-gray-700 rounded-full h-2 mb-4">
-                      <div 
-                        className="bg-cyan-500 h-2 rounded-full" 
-                        style={{ width: `${course.progress}%` }}
-                      ></div>
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs text-gray-400">{course.category}</span>
+                        <span className="text-xs font-semibold text-cyan-400">{course.progress}% Tamamlandı</span>
+                      </div>
+                      
+                      <p className="text-gray-300 text-sm mb-4 line-clamp-2">{course.description}</p>
+                      
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-4">
+                        <div 
+                          className="bg-cyan-500 h-2 rounded-full transition-all duration-300 ease-in-out" 
+                          style={{ width: `${course.progress}%` }}
+                        ></div>
+                      </div>
                     </div>
                     
                     <button className="w-full py-2 px-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md transition-colors">
