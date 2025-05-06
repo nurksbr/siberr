@@ -17,6 +17,8 @@ export default function UserMenu() {
   const [localUser, setLocalUser] = useState(null);
   // İstemci tarafında olduğumuzdan emin olmak için bir bayrak
   const [isMounted, setIsMounted] = useState(false);
+  // Önceki kullanıcıyı kaydetmek için ref
+  const prevUserRef = useRef(null);
 
   // Dropdown portal için ek state
   const [menuPortal, setMenuPortal] = useState(null);
@@ -67,14 +69,9 @@ export default function UserMenu() {
     // Sayfa yüklendiğinde localStorage kontrolü
     const userData = checkLocalStorage();
     setLocalUser(userData);
-
-    // Düzenli olarak localStorage kontrolü yap
-    const interval = setInterval(() => {
-      const userData = checkLocalStorage();
-      setLocalUser(userData);
-    }, 1000);
-
-    return () => clearInterval(interval);
+    
+    // Düzenli kontrol yerine bir kez kontrol yap
+    // Gereksiz durum güncellemelerini önlemek için interval kaldırıldı
   }, [isMounted]);
   
   // Auth değişikliklerini dinle
@@ -83,9 +80,13 @@ export default function UserMenu() {
     if (!isMounted) return;
     
     const handleAuthChange = (event) => {
-      console.log('UserMenu: Auth değişiklik olayı alındı', event.detail);
       const { user: authUser } = event.detail;
-      setLocalUser(authUser);
+      
+      // Önceki kullanıcı ile aynı mı kontrol et (gereksiz güncellemeleri önle)
+      if (JSON.stringify(prevUserRef.current) !== JSON.stringify(authUser)) {
+        prevUserRef.current = authUser;
+        setLocalUser(authUser);
+      }
     };
     
     // Event listener ekle
@@ -110,15 +111,25 @@ export default function UserMenu() {
   // Dışarıya tıklandığında menüyü kapat
   useClickOutside(ref, () => setIsOpen(false));
 
-  // Sayfa değişikliği için navigation işlevi
+  // Sayfa değişikliği için navigation işlevi - Next.js router kullanarak düzeltildi
   const handleNavigation = (path) => {
+    // Menüyü kapat
     setIsOpen(false);
-    // Eski implementasyonda boş path sorunu olabilir, direkt konsola yazalım
+    
+    // Debug için konsola yaz
     console.log(`UserMenu: ${path} adresine yönlendiriliyor...`);
-    // Yönlendirme yapmadan önce bir kısa gecikme ekleyelim
-    setTimeout(() => {
-      router.push(path);
-    }, 100);
+    
+    // Next.js router kullanarak yönlendirme yap - doğrudan çağrı
+    try {
+      // Yönlendirme öncesi küçük bir gecikme ekle (100ms)
+      setTimeout(() => {
+        router.push(path);
+      }, 100);
+    } catch (error) {
+      console.error('Yönlendirme hatası:', error);
+      // Hata durumunda window.location ile yönlendir
+      window.location.href = path;
+    }
   };
 
   // Çıkış işlemi ve ana sayfaya yönlendirme
@@ -128,16 +139,27 @@ export default function UserMenu() {
       localStorage.removeItem('cyberly_user');
       localStorage.removeItem('cyberly_token');
       
+      // UI değişiklikleri
+      setIsOpen(false);
+      setLocalUser(null);
+      
       // AuthContext üzerinden çıkış yap
       await logout();
       
-      // Menüyü kapat
-      setIsOpen(false);
-      
       // Ana sayfaya Next.js router ile yönlendir
       router.push('/');
+      
+      console.log('Başarıyla çıkış yapıldı');
     } catch (error) {
       console.error('Çıkış yaparken hata:', error);
+      
+      // Hata durumunda manuel temizlik yap
+      localStorage.removeItem('cyberly_user');
+      localStorage.removeItem('cyberly_token');
+      document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      
+      // Force navigate
+      window.location.href = '/';
     }
   };
 
@@ -223,13 +245,13 @@ export default function UserMenu() {
               
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => handleNavigation('/bildirimler')}
+                onClick={() => handleNavigation('/ayarlar/bildirimler')}
                 role="menuitem"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-cyan-400 group-hover:text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                Bildirimler
+                <span className="text-cyan-400 group-hover:text-cyan-300">Bildirim Ayarları</span>
               </button>
             </div>
             
@@ -261,7 +283,25 @@ export default function UserMenu() {
             <div className="py-1">
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={handleLogout}
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Direkt temizlik işlemleri
+                  localStorage.removeItem('cyberly_user');
+                  localStorage.removeItem('cyberly_token');
+                  
+                  // UI state'lerini güncelle
+                  setIsOpen(false);
+                  setLocalUser(null);
+                  
+                  // Çıkış işlemini gerçekleştir
+                  logout().finally(() => {
+                    // Cookie'yi elle temizle - garanti olsun diye
+                    document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                    
+                    // Sayfayı tarayıcı API'si ile yönlendir - kesin olması için
+                    window.location.href = '/';
+                  });
+                }}
                 role="menuitem"
               >
                 <FaSignOutAlt className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />

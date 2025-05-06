@@ -15,12 +15,38 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     
-    // Eğer userId yoksa veya yetki kontrolü gerekiyorsa
+    // Eğer userId yoksa, oturum açan kullanıcının ID'sini bul ve kullan
     if (!userId) {
-      return NextResponse.json({ error: 'Kullanıcı ID'si gerekli' }, { status: 400 });
+      // Oturum açan kullanıcının e-posta adresinden ID'sini bul
+      const currentUser = await prisma.user.findUnique({
+        where: { email: session.user.email as string },
+        select: { id: true }
+      });
+      
+      if (!currentUser) {
+        return NextResponse.json({ error: 'Oturum açan kullanıcı bulunamadı' }, { status: 401 });
+      }
+      
+      // Kullanıcının 2FA durumunu al
+      const user = await prisma.user.findUnique({
+        where: { id: currentUser.id },
+        select: {
+          id: true,
+          twoFactorEnabled: true
+        }
+      });
+      
+      if (!user) {
+        return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 });
+      }
+      
+      return NextResponse.json({
+        userId: user.id,
+        twoFactorEnabled: user.twoFactorEnabled || false
+      });
     }
     
-    // Kullanıcıyı ve 2FA durumunu kontrol et
+    // Belirtilen userId için kullanıcıyı kontrol et
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {

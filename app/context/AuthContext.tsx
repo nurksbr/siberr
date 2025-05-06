@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { createContext, useState, useEffect, useContext, ReactNode, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
 
@@ -47,6 +47,19 @@ const storeUser = (user: User | null): void => {
   if (typeof window === 'undefined') return;
   
   try {
+    // Mevcut kullanıcıyı kontrol et
+    const existingUserStr = localStorage.getItem(USER_STORAGE_KEY);
+    const existingUser = existingUserStr ? JSON.parse(existingUserStr) : null;
+    
+    // Aynı kullanıcı ise gereksiz yere event tetikleme ve localstorage güncelleme
+    if (user && existingUser && user.id === existingUser.id) {
+      // Eğer aynı kullanıcıysa, sadece kritik alanlar değişmişse güncelle
+      if (JSON.stringify(user) === JSON.stringify(existingUser)) {
+        // Tamamen aynıysa hiçbir şey yapma
+        return;
+      }
+    }
+    
     if (user) {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
       // Özel olay tetikle
@@ -113,8 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
 
   // Kullanıcı durumu değiştiğinde LocalStorage'ı güncelle
+  // Ancak useEffect her render'da çalışmayı önleyeceğiz
+  const userRef = useRef<User | null>(user);
+  
+  // Sadece kullanıcı değiştiğinde etkileyecek şekilde güncelle
   useEffect(() => {
-    storeUser(user);
+    // userRef'ten farklıysa güncelle
+    if (JSON.stringify(user) !== JSON.stringify(userRef.current)) {
+      userRef.current = user;
+      storeUser(user);
+    }
   }, [user]);
 
   // Sayfa yüklendiğinde oturum durumunu kontrol et
@@ -295,31 +316,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async (): Promise<void> => {
     setLoading(true);
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Çıkış yapılırken bir hata oluştu');
-      }
-
-      setUser(null);
-      storeUser(null);
-      
-      // Navbar'ı ve diğer bileşenleri bilgilendir
+      // LocalStorage temizliği - bu kısmı async/await dışında tut ki hızlıca çalışsın
       if (typeof window !== 'undefined') {
+        // Kullanıcı verilerini temizle
+        localStorage.removeItem(USER_STORAGE_KEY);
+        localStorage.removeItem('cyberly_token');
+        // Diğer muhtemel storage öğelerini temizle
+        sessionStorage.removeItem(USER_STORAGE_KEY);
+        
+        // Cookie'yi doğrudan temizle - ekstra önlem
+        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        
         // Olay yayınla - hızlı güncelleme için
         const authEvent = new CustomEvent(AUTH_CHANGE_EVENT, { 
           detail: { user: null, loggedIn: false } 
         });
         window.dispatchEvent(authEvent);
-        
-        // Sayfayı yenilemeden ana sayfaya yönlendir
-        router.push('/');
+      }
+      
+      // State'i hemen güncelle
+      setUser(null);
+      
+      try {
+        // API üzerinden çıkış işlemi - token cookie'sini temizler
+        // Ancak bu hataya düşerse bile diğer temizlik işlemleri çalışmış olacak
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+        });
+      } catch (apiError) {
+        console.error('Logout API hatası:', apiError);
+        // API hatası olsa bile kullanıcı çıkış yapmış olacak
+      }
+    } catch (error) {
+      console.error('Çıkış yapılırken hata:', error);
+      // Hata durumunda da temizlik yapalım
+      setUser(null);
+      storeUser(null);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(USER_STORAGE_KEY);
+        localStorage.removeItem('cyberly_token');
+        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
       }
     } finally {
       setLoading(false);

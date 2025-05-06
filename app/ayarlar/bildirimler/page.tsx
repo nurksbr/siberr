@@ -17,11 +17,33 @@ export default function BildirimAyarlariPage() {
   const [courseUpdates, setCourseUpdates] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [pageInfo, setPageInfo] = useState<string | null>('Bildirim ayarlarınızı burada yönetebilirsiniz.');
+
+  // Sayfa yüklendiğinde bilgi mesajını 5 saniye sonra kaldır
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageInfo(null);
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   // Kullanıcı oturum kontrolü
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/giris?callbackUrl=' + encodeURIComponent('/ayarlar/bildirimler'));
+      try {
+        console.log('Kullanıcı oturumu yok, giriş sayfasına yönlendiriliyor...');
+        const callbackUrl = encodeURIComponent('/ayarlar/bildirimler');
+        
+        // setTimeout ile küçük bir gecikme ekleyelim
+        setTimeout(() => {
+          router.push('/giris?callbackUrl=' + callbackUrl);
+        }, 100);
+      } catch (error) {
+        console.error('Yönlendirme hatası:', error);
+        // Hata durumunda doğrudan window.location kullan
+        window.location.href = '/giris?callbackUrl=' + encodeURIComponent('/ayarlar/bildirimler');
+      }
     }
   }, [user, loading, router]);
 
@@ -47,7 +69,20 @@ export default function BildirimAyarlariPage() {
       }
 
       const data = await response.json();
-      const notifications = data.settings?.notifications || {};
+      
+      // Önce data ve settings varlığını kontrol et
+      if (!data || !data.settings) {
+        console.warn('Ayarlar verileri bulunamadı, varsayılan değerler kullanılıyor');
+        // Varsayılan değerleri kullan
+        setEmailNotifications(true);
+        setPushNotifications(true);
+        setSecurityAlerts(true);
+        setMarketingEmails(false);
+        setCourseUpdates(true);
+        return;
+      }
+      
+      const notifications = data.settings.notifications || {};
       
       // Bildirim ayarlarını güncelle (değer yoksa varsayılan değerleri kullan)
       setEmailNotifications(notifications.emailNotifications !== undefined ? notifications.emailNotifications : true);
@@ -57,9 +92,17 @@ export default function BildirimAyarlariPage() {
       setCourseUpdates(notifications.courseUpdates !== undefined ? notifications.courseUpdates : true);
     } catch (error) {
       console.error('Bildirim ayarları yüklenirken hata:', error);
+      
+      // Hataya rağmen UI göstermek için varsayılan değerleri ayarla
+      setEmailNotifications(true);
+      setPushNotifications(true);
+      setSecurityAlerts(true);
+      setMarketingEmails(false);
+      setCourseUpdates(true);
+      
       setSaveMessage({
         type: 'error',
-        text: 'Bildirim ayarları yüklenemedi.'
+        text: 'Bildirim ayarları yüklenemedi, varsayılan değerler gösteriliyor.'
       });
       
       // 3 saniye sonra mesajı kaldır
@@ -137,6 +180,15 @@ export default function BildirimAyarlariPage() {
       
       <h1 className="text-3xl font-bold mb-8">Bildirim Ayarları</h1>
       
+      {pageInfo && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
+          </svg>
+          {pageInfo}
+        </div>
+      )}
+      
       {saveMessage && (
         <div className={`mb-4 p-3 rounded ${saveMessage.type === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-800/30 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-800/30 dark:text-red-200'}`}>
           {saveMessage.text}
@@ -159,10 +211,12 @@ export default function BildirimAyarlariPage() {
             <div className="flex items-center h-5">
               <input
                 id="email-notifications"
+                name="email-notifications"
                 type="checkbox"
                 checked={emailNotifications}
                 onChange={(e) => setEmailNotifications(e.target.checked)}
                 className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                autoComplete="off"
               />
             </div>
             <div className="ml-3 text-sm">
@@ -179,10 +233,12 @@ export default function BildirimAyarlariPage() {
             <div className="flex items-center h-5">
               <input
                 id="push-notifications"
+                name="push-notifications"
                 type="checkbox"
                 checked={pushNotifications}
                 onChange={(e) => setPushNotifications(e.target.checked)}
                 className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                autoComplete="off"
               />
             </div>
             <div className="ml-3 text-sm">
@@ -213,10 +269,12 @@ export default function BildirimAyarlariPage() {
             <div className="flex items-center h-5">
               <input
                 id="security-alerts"
+                name="security-alerts"
                 type="checkbox"
                 checked={securityAlerts}
                 onChange={(e) => setSecurityAlerts(e.target.checked)}
                 className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                autoComplete="off"
               />
             </div>
             <div className="ml-3 text-sm">
@@ -233,10 +291,12 @@ export default function BildirimAyarlariPage() {
             <div className="flex items-center h-5">
               <input
                 id="course-updates"
+                name="course-updates"
                 type="checkbox"
                 checked={courseUpdates}
                 onChange={(e) => setCourseUpdates(e.target.checked)}
                 className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                autoComplete="off"
               />
             </div>
             <div className="ml-3 text-sm">
@@ -253,10 +313,12 @@ export default function BildirimAyarlariPage() {
             <div className="flex items-center h-5">
               <input
                 id="marketing-emails"
+                name="marketing-emails"
                 type="checkbox"
                 checked={marketingEmails}
                 onChange={(e) => setMarketingEmails(e.target.checked)}
                 className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                autoComplete="off"
               />
             </div>
             <div className="ml-3 text-sm">

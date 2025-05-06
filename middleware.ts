@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = url;
   
   // Geçerli URL'i callback için kullan
-  const callbackUrl = encodeURIComponent(url.pathname + url.search);
+  const callbackUrl = encodeURIComponent(pathname + (url.search || ''));
   
   // Token geçerli mi kontrol et
   const isValidUserToken = token ? await isValidToken(token) : false;
@@ -38,23 +38,73 @@ export async function middleware(request: NextRequest) {
     <head>
       <title>Yönlendiriliyor...</title>
       <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+      <meta name="robots" content="noindex, nofollow">
     </head>
     <body>
       <script>
         // LocalStorage'dan kullanıcı bilgisini kontrol et
-        try {
-          const user = localStorage.getItem('cyberly_user');
-          if (user) {
-            console.log('LocalStorage\'da kullanıcı bilgisi bulundu, sayfayı yeniliyoruz');
-            window.location.reload();
-          } else {
-            console.log('LocalStorage\'da kullanıcı bilgisi bulunamadı, giriş sayfasına yönlendiriliyor');
+        (function() {
+          try {
+            const user = localStorage.getItem('cyberly_user');
+            
+            // Kullanıcı bilgisi var mı ve geçerli bir JSON mu kontrol et
+            if (user && user !== 'undefined' && user !== 'null') {
+              try {
+                // JSON olarak parse edip doğrula
+                const userData = JSON.parse(user);
+                if (userData && userData.id) {
+                  console.log('LocalStorage\'da kullanıcı bilgisi bulundu');
+                  
+                  // Cookie kontrolü yap
+                  let hasAuthCookie = document.cookie.split('; ').some(row => row.startsWith('auth_token='));
+                  
+                  if (hasAuthCookie) {
+                    // Hem localStorage hem cookie varsa, oturumu kontrol et ve sayfayı yenile
+                    console.log('Auth cookie de mevcut, sayfayı yeniliyorum');
+                    window.location.reload();
+                    return;
+                  }
+                  
+                  // Sayfayı yenileme yerine oturum doğrulama API'sine istek gönder
+                  fetch('/api/auth/session', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                  })
+                  .then(response => {
+                    if (response.ok) {
+                      // Kullanıcı oturumu doğrulandı, sayfayı yenile
+                      console.log('API doğrulaması başarılı, sayfayı yeniliyorum');
+                      window.location.reload();
+                    } else {
+                      // Oturum doğrulanamadı, giriş sayfasına yönlendir
+                      localStorage.removeItem('cyberly_user'); // Geçersiz kullanıcı verisi temizle
+                      console.log('Oturum doğrulanamadı, giriş sayfasına yönlendiriyorum');
+                      window.location.href = '/giris?callbackUrl=${callbackUrl}';
+                    }
+                  })
+                  .catch(err => {
+                    console.error('Oturum kontrolü sırasında hata:', err);
+                    window.location.href = '/giris?callbackUrl=${callbackUrl}';
+                  });
+                } else {
+                  throw new Error('Geçersiz kullanıcı verisi');
+                }
+              } catch (parseError) {
+                console.error('JSON parse hatası:', parseError);
+                localStorage.removeItem('cyberly_user'); // Bozuk veriyi temizle
+                window.location.href = '/giris?callbackUrl=${callbackUrl}';
+              }
+            } else {
+              // Kullanıcı bilgisi yok, doğrudan giriş sayfasına yönlendir
+              console.log('LocalStorage\'da kullanıcı bilgisi bulunamadı');
+              window.location.href = '/giris?callbackUrl=${callbackUrl}';
+            }
+          } catch (error) {
+            console.error('LocalStorage kontrolünde hata:', error);
             window.location.href = '/giris?callbackUrl=${callbackUrl}';
           }
-        } catch (error) {
-          console.error('LocalStorage kontrolünde hata:', error);
-          window.location.href = '/giris?callbackUrl=${callbackUrl}';
-        }
+        })();
       </script>
       <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
         <div style="text-align: center;">

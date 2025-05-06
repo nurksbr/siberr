@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useReducer } from 'react'
+import { useState, useEffect, useReducer, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
@@ -44,6 +44,9 @@ function Navbar() {
   // SSR/CSR uyumsuzluğunu engellemek için kullanacağımız bir bayrak
   const [isMounted, setIsMounted] = useState(false);
   
+  // Önceki kullanıcı referansı
+  const prevUserRef = useRef(null);
+  
   const router = useRouter();
   
   // Bileşen mount edildikten sonra isLoggedIn durumunu kontrol et
@@ -54,16 +57,17 @@ function Navbar() {
     if (typeof window !== 'undefined') {
       try {
         const storedUser = localStorage.getItem('cyberly_user');
-        console.log('Navbar: localStorage kontrolü', !!storedUser, storedUser ? JSON.parse(storedUser) : null);
+        // Gereksiz logları kaldır
+        // console.log('Navbar: localStorage kontrolü', !!storedUser, storedUser ? JSON.parse(storedUser) : null);
         
         if (storedUser) {
           const userData = JSON.parse(storedUser);
           setLocalUser(userData);
           setIsLoggedIn(true);
-          console.log('Navbar: Kullanıcı giriş yapmış, isLoggedIn=true');
+          // console.log('Navbar: Kullanıcı giriş yapmış, isLoggedIn=true');
         } else {
           setIsLoggedIn(false);
-          console.log('Navbar: Kullanıcı giriş yapmamış, isLoggedIn=false');
+          // console.log('Navbar: Kullanıcı giriş yapmamış, isLoggedIn=false');
         }
       } catch (error) {
         console.error('Navbar: LocalStorage kontrolü sırasında hata:', error);
@@ -90,18 +94,27 @@ function Navbar() {
     if (!isMounted) return;
     
     const handleAuthChange = (event) => {
-      console.log('Navbar: Auth değişiklik olayı alındı', event.detail);
+      // console.log('Navbar: Auth değişiklik olayı alındı', event.detail);
       const { user: authUser, loggedIn } = event.detail;
       
-      // State'i güncelle
-      if (typeof loggedIn !== 'undefined') {
-        setIsLoggedIn(loggedIn);
-      } else {
-        setIsLoggedIn(!!authUser);
-      }
+      // Önbelleğe alınmış kullanıcıyla karşılaştır
+      const prevUserStr = JSON.stringify(prevUserRef.current);
+      const currentUserStr = JSON.stringify(authUser);
       
-      setLocalUser(authUser);
-      forceUpdate();
+      // Sadece değişiklik varsa güncelle
+      if (prevUserStr !== currentUserStr) {
+        prevUserRef.current = authUser;
+        
+        // State'i güncelle
+        if (typeof loggedIn !== 'undefined') {
+          setIsLoggedIn(loggedIn);
+        } else {
+          setIsLoggedIn(!!authUser);
+        }
+        
+        setLocalUser(authUser);
+        forceUpdate();
+      }
     };
     
     // Event listener'ı ekle
@@ -146,11 +159,18 @@ function Navbar() {
   // User değişikliklerini izle
   useEffect(() => {
     if (user) {
-      console.log('Navbar: useAuth hook kullanıcı değişikliği algılandı', user);
-      setIsLoggedIn(true);
-      setLocalUser(user);
+      // Önceki state ile karşılaştır
+      const prevUserStr = JSON.stringify(localUser);
+      const currentUserStr = JSON.stringify(user);
+      
+      // Sadece değişiklik varsa güncelle ve log yap
+      if (prevUserStr !== currentUserStr) {
+        // console.log('Navbar: useAuth hook kullanıcı değişikliği algılandı', user);
+        setIsLoggedIn(true);
+        setLocalUser(user);
+      }
     }
-  }, [user]);
+  }, [user, localUser]);
 
   // Görüntülenecek kullanıcı bilgisi
   const currentUser = user || localUser;
@@ -182,12 +202,28 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      // Önce localStorage'ı temizle
+      localStorage.removeItem('cyberly_user');
+      
+      // UI durumunu güncelle
       setIsMenuOpen(false);
       setIsLoggedIn(false);
+      setLocalUser(null);
+      
+      // Auth context üzerinden çıkış işlemi
+      await logout();
+      
+      // Ana sayfaya yönlendir
       router.push('/');
+      
+      // Sayfa yenilenirse her şeyin sıfırlanmasını sağla
+      console.log('Kullanıcı başarıyla çıkış yaptı');
     } catch (error) {
       console.error('Çıkış yapılırken hata:', error);
+      // Hata durumunda zorla çıkış yap
+      localStorage.removeItem('cyberly_user');
+      document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      window.location.href = '/';
     }
   }
 
@@ -423,27 +459,43 @@ function Navbar() {
                   </div>
                   <button 
                     className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
-                    onClick={handleMobileNavigation('/ayarlar')}
+                    onClick={(e) => handleMobileNavigation('/ayarlar')(e)}
                   >
                     Ayarlar
                   </button>
                   {currentUser?.role === 'ADMIN' && (
                     <button 
                       className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
-                      onClick={handleMobileNavigation('/admin-panel')}
+                      onClick={(e) => handleMobileNavigation('/admin-panel')(e)}
                     >
                       Yönetim Paneli
                     </button>
                   )}
                   <button 
                     className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
-                    onClick={handleMobileNavigation('/profilim')}
+                    onClick={(e) => handleMobileNavigation('/profilim')(e)}
                   >
                     Profilim
                   </button>
                   <button
                     className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold text-red-400 hover:bg-gray-800/30 transition-colors"
-                    onClick={handleLogout}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Direkt temizlik işlemleri
+                      localStorage.removeItem('cyberly_user');
+                      localStorage.removeItem('cyberly_token');
+                      // UI durumunu güncelle
+                      setIsMenuOpen(false);
+                      setIsLoggedIn(false);
+                      setLocalUser(null);
+                      // Çıkış işlemini çağır
+                      logout().finally(() => {
+                        // Cookie'yi de temizle
+                        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        // Sayfayı ana sayfaya yönlendir
+                        window.location.href = '/';
+                      });
+                    }}
                   >
                     Çıkış Yap
                   </button>

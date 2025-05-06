@@ -12,7 +12,13 @@ export default function AyarlarPage() {
   // Sayfa yüklendiğinde oturum kontrolü
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/giris?callbackUrl=' + encodeURIComponent('/ayarlar'));
+      try {
+        const callbackUrl = encodeURIComponent('/ayarlar');
+        router.push(`/giris?callbackUrl=${callbackUrl}`);
+      } catch (error) {
+        console.error('Yönlendirme hatası:', error);
+        window.location.href = `/giris?callbackUrl=${encodeURIComponent('/ayarlar')}`;
+      }
     }
   }, [user, loading, router]);
 
@@ -129,6 +135,19 @@ export default function AyarlarPage() {
                   className="bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-800/50 dark:hover:bg-yellow-800 text-yellow-800 dark:text-yellow-100 px-4 py-2 rounded-md text-sm font-medium inline-block"
                 >
                   İki Faktörlü Kimlik Doğrulama Ayarla
+                </Link>
+              </div>
+              
+              <div className="p-4 bg-cyan-50 dark:bg-cyan-900/30 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                <h3 className="font-medium text-cyan-800 dark:text-cyan-200 mb-2">Bildirim Ayarları</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-2">
+                  Hangi bildirimleri almak istediğinizi özelleştirin.
+                </p>
+                <Link
+                  href="/ayarlar/bildirimler"
+                  className="bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-800/50 dark:hover:bg-cyan-800 text-cyan-800 dark:text-cyan-100 px-4 py-2 rounded-md text-sm font-medium inline-block"
+                >
+                  Bildirim Ayarlarını Düzenle
                 </Link>
               </div>
             </div>
