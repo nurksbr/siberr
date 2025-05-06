@@ -146,25 +146,22 @@ export default function CoursesPage() {
             <h2 className="text-2xl font-semibold text-cyan-400 mb-6">Aktif Kurslarım</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dummyCourses.filter(course => course.progress > 0 && course.progress < 100).map(course => (
+              {dummyCourses.filter(course => course.progress > 0 && course.progress < 100).map((course, index) => (
                 <div 
                   key={course.id}
-                  className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-cyan-500 transition-all duration-300 shadow-xl"
+                  className="bg-gray-800 rounded-lg overflow-hidden shadow-md h-full flex flex-col relative group hover:shadow-xl transition duration-300"
                 >
-                  <div className="h-48 relative">
+                  <div className="relative pt-[60%]">
                     <Image 
-                      src={course.imageUrl} 
+                      src={course.imageUrl}
                       alt={course.title}
+                      className="object-cover rounded-t-lg transition-transform duration-300 group-hover:scale-105"
                       fill
-                      style={{objectFit: 'cover'}}
-                      className="w-full"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority={index < 4}
                     />
-                    <div className="absolute top-2 right-2 px-2 py-1 bg-cyan-600 text-xs text-white rounded-md">
-                      {course.level}
-                    </div>
                   </div>
-                  
-                  <div className="p-6">
+                  <div className="p-4 flex-1 flex flex-col">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-xs text-gray-400">{course.category}</span>
                       <span className="text-xs font-semibold text-cyan-400">{course.progress}% Tamamlandı</span>
@@ -237,7 +234,7 @@ export default function CoursesPage() {
             <h2 className="text-2xl font-semibold text-purple-400 mb-6">Önerilen Kurslar</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dummyCourses.filter(course => course.progress === 0).map(course => (
+              {dummyCourses.filter(course => course.progress === 0).map((course, index) => (
                 <div 
                   key={course.id}
                   className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-purple-500 transition-all duration-300 shadow-xl"
@@ -249,8 +246,10 @@ export default function CoursesPage() {
                       fill
                       style={{objectFit: 'cover'}}
                       className="w-full"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority={index < 4}
                     />
-                    <div className="absolute top-2 right-2 px-2 py-1 bg-purple-600 text-xs text-white rounded-md">
+                    <div className="absolute top-2 right-2 px-2 py-1 bg-cyan-600 text-xs text-white rounded-md">
                       {course.level}
                     </div>
                   </div>

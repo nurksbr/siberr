@@ -289,16 +289,16 @@ export default function UserMenu() {
                   localStorage.removeItem('cyberly_user');
                   localStorage.removeItem('cyberly_token');
                   
+                  // Cookie'yi temizle - bu kısım eksikti
+                  document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                  
                   // UI state'lerini güncelle
                   setIsOpen(false);
                   setLocalUser(null);
                   
                   // Çıkış işlemini gerçekleştir
                   logout().finally(() => {
-                    // Cookie'yi elle temizle - garanti olsun diye
-                    document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-                    
-                    // Sayfayı tarayıcı API'si ile yönlendir - kesin olması için
+                    // Sayfayı tarayıcı API'si ile yönlendir
                     window.location.href = '/';
                   });
                 }}

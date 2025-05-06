@@ -205,22 +205,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // Token geçerli, sunucu doğrulamasına git
-      const response = await fetch('/api/auth/session', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        cache: 'no-store',
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
+      try {
+        const controller = new AbortController();
+        // 10 saniye timeout ekle
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch('/api/auth/session', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          credentials: 'include',
+          cache: 'no-store',
+          mode: 'same-origin', // CORS hatalarını önlemek için
+          signal: controller.signal // timeout için
+        });
+        
+        // Timeout'u temizle
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.error('Oturum doğrulama API hatası:', response.status);
+          setUser(null);
+          storeUser(null);
+          return false;
+        }
+        
+        // JSON parse hatalarını yakala
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('Oturum JSON parse hatası:', parseError);
+          setUser(null);
+          storeUser(null);
+          return false;
+        }
+        
         if (data.user) {
           // Kullanıcı bilgisini güncelle
           setUser(data.user);
           storeUser(data.user);
           return true;
+        }
+      } catch (fetchError) {
+        console.error('Oturum fetch hatası:', fetchError);
+        
+        // AbortError özel olarak işle - timeout durumunda
+        if (fetchError instanceof DOMException && fetchError.name === 'AbortError') {
+          console.warn('Oturum doğrulama isteği zaman aşımına uğradı');
+        }
+        
+        // Fetch hatası durumunda - bağlantı veya ağ problemi olabilir
+        // Daha önce depolanmış kullanıcı bilgisi varsa, o bilgileri geçici olarak koru
+        const existingUser = getStoredUser();
+        if (existingUser) {
+          setUser(existingUser);
+          return true; // Ağ hatası olsa bile kullanıcı bilgisi varsa oturumu açık tut
         }
       }
       
@@ -242,66 +286,112 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('AuthContext login fonksiyonu başladı');
     try {
       console.log('API isteği gönderiliyor...');
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-        cache: 'no-store',
-      });
+      
+      // Ağ hatalarını yakalamak için try-catch
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          body: JSON.stringify({ email, password }),
+          credentials: 'include', // Cookie'ler için
+          cache: 'no-store',
+          mode: 'same-origin' // CORS hatalarını önlemek için
+        });
 
-      const data = await response.json();
-      console.log('API yanıtı alındı:', response.status, data);
+        // Response tipi kontrolü
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('API JSON yanıtı döndürmedi:', contentType);
+          throw new Error('Sunucu geçersiz yanıt döndürdü. Lütfen daha sonra tekrar deneyin.');
+        }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Giriş yapılırken bir hata oluştu');
-      }
-
-      // Kullanıcı bilgilerini doğrudan yanıttan al
-      if (data.user) {
-        console.log('Kullanıcı bilgileri alındı, state güncelleniyor');
-        setUser(data.user);
-        
-        // Kullanıcıyı localStorage'a kaydetme işlemini güçlendirelim
+        // JSON parse hatalarını yakalamak için try-catch
+        let data;
         try {
-          // Önce localStorage'ı temizle
-          localStorage.removeItem(USER_STORAGE_KEY);
-          // Sonra yeni kullanıcı bilgilerini kaydet
-          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
-          console.log('Kullanıcı bilgileri localStorage\'a kaydedildi', data.user);
+          data = await response.json();
+        } catch (parseError) {
+          console.error('JSON parse hatası:', parseError);
+          throw new Error('Sunucu yanıtı işlenemedi. Lütfen daha sonra tekrar deneyin.');
+        }
+        
+        console.log('API yanıtı alındı:', response.status, data);
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Giriş yapılırken bir hata oluştu');
+        }
+
+        // Kullanıcı bilgilerini doğrudan yanıttan al
+        if (data.user) {
+          console.log('Kullanıcı bilgileri alındı, state güncelleniyor');
+          setUser(data.user);
           
-          // Kullanıcı state'ini güncelle
-          storeUser(data.user);
-        } catch (storageError) {
-          console.error('LocalStorage kayıt hatası:', storageError);
-        }
-        
-        // Navbar'ı ve diğer bileşenleri bilgilendir
-        if (typeof window !== 'undefined') {
-          // Olay yayınla - hızlı güncelleme için
-          const authEvent = new CustomEvent(AUTH_CHANGE_EVENT, { 
-            detail: { user: data.user, loggedIn: true } 
-          });
-          window.dispatchEvent(authEvent);
-        }
-        
-        // Callback URL varsa doğrudan yönlendir, yoksa ana sayfaya
-        const callbackUrl = searchParams?.get('callbackUrl');
-        console.log('Callback URL:', callbackUrl);
-        
-        if (callbackUrl) {
-          console.log(`Callback URL'e yönlendiriliyor: ${callbackUrl}`);
-          router.push(decodeURIComponent(callbackUrl));
+          // Kullanıcıyı localStorage'a kaydetme işlemini güçlendirelim
+          try {
+            // Önce localStorage'ı temizle
+            localStorage.removeItem(USER_STORAGE_KEY);
+            // Sonra yeni kullanıcı bilgilerini kaydet
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user));
+            console.log('Kullanıcı bilgileri localStorage\'a kaydedildi', data.user);
+            
+            // Kullanıcı state'ini güncelle
+            storeUser(data.user);
+          } catch (storageError) {
+            console.error('LocalStorage kayıt hatası:', storageError);
+          }
+          
+          // Navbar'ı ve diğer bileşenleri bilgilendir
+          if (typeof window !== 'undefined') {
+            // Olay yayınla - hızlı güncelleme için
+            const authEvent = new CustomEvent(AUTH_CHANGE_EVENT, { 
+              detail: { user: data.user, loggedIn: true } 
+            });
+            window.dispatchEvent(authEvent);
+          }
+          
+          // Callback URL varsa doğrudan yönlendir, yoksa ana sayfaya
+          const callbackUrl = searchParams?.get('callbackUrl');
+          console.log('Callback URL:', callbackUrl);
+          
+          if (callbackUrl) {
+            console.log(`Callback URL'e yönlendiriliyor: ${callbackUrl}`);
+            try {
+              router.push(decodeURIComponent(callbackUrl));
+            } catch (navigateError) {
+              console.error('Callback yönlendirme hatası:', navigateError);
+              // Hata durumunda alternatif olarak window.location kullan
+              window.location.href = decodeURIComponent(callbackUrl);
+            }
+          } else {
+            // Ana sayfaya yönlendir
+            console.log('Kullanıcı giriş yaptı, ana sayfaya yönlendiriliyor');
+            try {
+              router.push('/');
+            } catch (navigateError) {
+              console.error('Ana sayfa yönlendirme hatası:', navigateError);
+              // Hata durumunda alternatif olarak window.location kullan
+              window.location.href = '/';
+            }
+          }
         } else {
-          // Ana sayfaya yönlendir
-          console.log('Kullanıcı giriş yaptı, ana sayfaya yönlendiriliyor');
-          router.push('/');
+          // Oturum durumunu kontrol et
+          console.log('Kullanıcı bilgisi bulunamadı, checkAuth çağrılıyor');
+          await checkAuth();
         }
-      } else {
-        // Oturum durumunu kontrol et
-        console.log('Kullanıcı bilgisi bulunamadı, checkAuth çağrılıyor');
-        await checkAuth();
+      } catch (fetchError) {
+        console.error('Fetch hatası:', fetchError);
+        
+        // Ağ hatalarını özel olarak işle
+        if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+          throw new Error('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.');
+        }
+        
+        // Diğer hataları yeniden fırlat
+        throw fetchError;
       }
     } catch (error) {
       console.error('Login fonksiyonu hatası:', error);

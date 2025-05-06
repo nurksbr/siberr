@@ -65,71 +65,134 @@ export default function LoginPage() {
     console.log('Giriş denemesi başlatılıyor...')
     
     try {
-      // API isteği direkt burada yapalım
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
-        cache: 'no-store',
-      });
+      // API isteği yapmadan önce sunucu durumunu kontrol et
+      console.log('API isteği hazırlanıyor...')
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Giriş yapılırken bir hata oluştu');
-      }
-      
-      console.log('Login API yanıtı:', data);
-      
-      // Kullanıcı bilgilerini doğrudan localStorage'a kaydedelim
-      if (data.user) {
-        // İlk olarak localStorage'a manuel olarak kaydet - en hızlı yanıt için
-        localStorage.setItem('cyberly_user', JSON.stringify(data.user));
-        console.log('Kullanıcı bilgileri localStorage\'a kaydedildi');
+      try {
+        // Alternatif bir yöntem kullanarak istek yapıyoruz
+        const fetchResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          }),
+          credentials: 'include', // Önemli: Cookie'ler için gerekli
+          cache: 'no-store',
+        });
         
-        // Başarılı mesajı göster
-        setLoginSuccess(true);
+        // İşleme hatalarına karşı korunmak için önce yanıtı text olarak alalım
+        const responseText = await fetchResponse.text();
+        console.log('Ham API yanıtı:', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
         
-        // AuthContext'i güncellemek için login fonksiyonunu çağır
-        try {
-          console.log('AuthContext login fonksiyonu çağrılıyor...');
-          await login(formData.email, formData.password);
-          console.log('AuthContext başarıyla güncellendi');
-        } catch (loginError) {
-          console.error('AuthContext login hatası:', loginError);
-          // AuthContext hatası durumunda callback yönlendirmesi yine de çalışsın
+        // Response tipi kontrolü
+        const contentType = fetchResponse.headers.get('content-type');
+        console.log('API yanıt content-type:', contentType);
+        
+        let data;
+        
+        // JSON yanıtı mı kontrol et
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('API JSON yanıtı döndürmedi:', contentType);
+          
+          // HTML yanıtı durumunda daha spesifik hata mesajı
+          if (contentType && contentType.includes('text/html')) {
+            console.error('HTML yanıt içeriği (kısaltılmış):', responseText.substring(0, 200) + '...');
+            throw new Error('API servis hatası (HTML yanıt). Sunucu muhtemelen çalışmıyor veya hata veriyor. Lütfen yönetici ile iletişime geçin.');
+          }
+          
+          throw new Error('Sunucu geçersiz yanıt türü döndürdü: ' + (contentType || 'belirsiz'));
         }
         
-        // Yönlendirme işlemini başlat
-        setTimeout(() => {
-          // Callback URL'i kontrol et ve yönlendir
-          const urlParams = new URLSearchParams(window.location.search);
-          const callbackUrl = urlParams.get('callbackUrl');
+        // Text yanıt JSON'a dönüştür
+        try {
+          data = JSON.parse(responseText);
+          console.log('API yanıt verisi:', data);
+        } catch (jsonError) {
+          console.error('JSON parse hatası:', jsonError, 'Ham veri:', responseText);
+          throw new Error('Sunucu yanıtı JSON formatında değil. Lütfen daha sonra tekrar deneyin.');
+        }
+        
+        if (!fetchResponse.ok) {
+          throw new Error(data.error || 'Giriş yapılırken bir hata oluştu');
+        }
+        
+        console.log('Login API yanıtı:', data);
+        
+        // Kullanıcı bilgilerini doğrudan localStorage'a kaydedelim
+        if (data.user) {
+          // İlk olarak localStorage'a manuel olarak kaydet - en hızlı yanıt için
+          localStorage.setItem('cyberly_user', JSON.stringify(data.user));
+          console.log('Kullanıcı bilgileri localStorage\'a kaydedildi');
           
-          if (callbackUrl) {
-            console.log(`Callback URL'e yönlendiriliyor: ${decodeURIComponent(callbackUrl)}`);
-            // router.push yerine doğrudan window.location kullan, daha güvenilir
-            window.location.href = decodeURIComponent(callbackUrl);
-          } else {
-            // Ana sayfaya yönlendir
-            console.log('Ana sayfaya yönlendiriliyor');
-            window.location.href = '/';
+          // Başarılı mesajı göster
+          setLoginSuccess(true);
+          
+          // AuthContext'i güncellemek için login fonksiyonunu çağır
+          try {
+            console.log('AuthContext login fonksiyonu çağrılıyor...');
+            await login(formData.email, formData.password);
+            console.log('AuthContext başarıyla güncellendi');
+          } catch (loginError) {
+            console.error('AuthContext login hatası:', loginError);
+            // AuthContext hatası durumunda callback yönlendirmesi yine de çalışsın
           }
-        }, 1000); // Biraz daha uzun bir gecikme ekleyelim
+          
+          // Yönlendirme işlemini başlat
+          setTimeout(() => {
+            try {
+              // Callback URL'i kontrol et ve yönlendir
+              const urlParams = new URLSearchParams(window.location.search);
+              const callbackUrl = urlParams.get('callbackUrl');
+              
+              if (callbackUrl) {
+                console.log(`Callback URL'e yönlendiriliyor: ${decodeURIComponent(callbackUrl)}`);
+                // router.push yerine doğrudan window.location kullan, daha güvenilir
+                window.location.href = decodeURIComponent(callbackUrl);
+              } else {
+                // Ana sayfaya yönlendir
+                console.log('Ana sayfaya yönlendiriliyor');
+                window.location.href = '/';
+              }
+            } catch (navigateError) {
+              console.error('Yönlendirme hatası:', navigateError);
+              // Hata durumunda yine de ana sayfaya gitmeye çalış
+              window.location.href = '/';
+            }
+          }, 1000); // Biraz daha uzun bir gecikme ekleyelim
+        }
+      } catch (error: unknown) {
+        console.error('Login hatası:', error);
+        
+        // Ağ hatalarını özel olarak işle
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          setLoginError('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin ve daha sonra tekrar deneyin.');
+        } else {
+          const errorMessage = error instanceof Error 
+            ? error.message 
+            : 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.';
+          setLoginError(errorMessage);
+        }
+      } finally {
+        setIsLoading(false)
       }
     } catch (error: unknown) {
-      console.error('Login hatası:', error)
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.';
-      setLoginError(errorMessage)
-    } finally {
-      setIsLoading(false)
+      console.error('Login hatası:', error);
+      
+      // Ağ hatalarını özel olarak işle
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setLoginError('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin ve daha sonra tekrar deneyin.');
+      } else {
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'Giriş yapılırken bir hata oluştu. Lütfen tekrar deneyin.';
+        setLoginError(errorMessage);
+      }
     }
   }
 
