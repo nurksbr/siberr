@@ -213,12 +213,10 @@ export default function CoursesPage() {
                   <div className="bg-[#111827] rounded-lg overflow-hidden border border-gray-800 h-full flex flex-col relative group hover:border-cyan-700 transition-all duration-300">
                     {/* Üst kısım - Video Önizleme */}
                     <div className="relative pt-[60%]">
-                      <Image 
+                      <img 
                         src={`https://img.youtube.com/vi/${video.id}/mqdefault.jpg`}
                         alt={video.title}
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-[#111827] to-transparent opacity-50"></div>
                       <div className="absolute bottom-0 left-0 w-full p-4">
@@ -305,13 +303,10 @@ export default function CoursesPage() {
                   className="bg-[#111827] rounded-lg overflow-hidden border border-gray-800 h-full flex flex-col relative group hover:border-cyan-700 transition-all duration-300"
                 >
                   <div className="relative pt-[60%]">
-                    <Image 
+                    <img 
                       src={course.imageUrl}
                       alt={course.title}
-                      className="object-cover transition-transform duration-300 group-hover:scale-105"
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      priority={index < 4}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#111827] to-transparent opacity-50"></div>
                     <div className="absolute bottom-0 left-0 w-full p-4">
