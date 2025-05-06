@@ -7,6 +7,7 @@ import { AUTH_CHANGE_EVENT } from '../context/AuthContext';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { FaUserCircle, FaSignOutAlt, FaUserCog, FaChartBar, FaLock, FaShieldAlt } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 
 export default function UserMenu() {
   const router = useRouter();
@@ -129,12 +130,6 @@ export default function UserMenu() {
     }
   };
 
-  // İlgili sayfaya yönlendirme
-  const handleNavigation = (path) => {
-    setIsOpen(false);
-    window.location.href = path;
-  };
-
   // Kullanıcı yoksa veya SSR ise menüyü gösterme
   if (!isMounted || !currentUser) {
     return null;
@@ -205,16 +200,24 @@ export default function UserMenu() {
             <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => handleNavigation('/profil')}
+                onClick={() => { 
+                  setIsOpen(false); // Menüyü kapat
+                  // Doğrudan tam URL'ye yönlendir
+                  window.location.href = 'http://localhost:3000/profilim'; 
+                }}
                 role="menuitem"
               >
                 <FaUserCog className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />
-                Profil
+                Profilim
               </button>
               
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => handleNavigation('/egitimlerim')}
+                onClick={() => { 
+                  setIsOpen(false); // Menüyü kapat
+                  // Doğrudan tam URL'ye yönlendir
+                  window.location.href = 'http://localhost:3000/egitimlerim'; 
+                }}
                 role="menuitem"
               >
                 <FaChartBar className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />
@@ -223,7 +226,10 @@ export default function UserMenu() {
               
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => handleNavigation('/ayarlar')}
+                onClick={() => { 
+                  setIsOpen(false); // Menüyü kapat
+                  window.location.href = 'http://localhost:3000/ayarlar'; 
+                }}
                 role="menuitem"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -235,7 +241,10 @@ export default function UserMenu() {
               
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => handleNavigation('/bildirimler')}
+                onClick={() => { 
+                  setIsOpen(false); // Menüyü kapat
+                  window.location.href = 'http://localhost:3000/bildirimler'; 
+                }}
                 role="menuitem"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,7 +259,10 @@ export default function UserMenu() {
               <div className="py-1">
                 <button
                   className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                  onClick={() => handleNavigation('/profil')}
+                  onClick={() => { 
+                    setIsOpen(false); // Menüyü kapat
+                    window.location.href = 'http://localhost:3000/admin-panel'; 
+                  }}
                   role="menuitem"
                 >
                   <FaShieldAlt className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />
@@ -260,14 +272,14 @@ export default function UserMenu() {
             )}
             
             {/* 2FA Ayarları */}
-            <button
+            {/* <button
               className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
               onClick={() => handleNavigation('/profil?tab=2fa')}
               role="menuitem"
             >
               <FaLock className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />
               2FA Ayarları
-            </button>
+            </button> */}
             
             {/* Çıkış */}
             <div className="py-1">

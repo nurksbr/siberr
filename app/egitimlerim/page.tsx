@@ -7,6 +7,24 @@ import { useAuth } from '../context/AuthContext'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
+// Direkt erişim kontrolü
+if (typeof window !== 'undefined') {
+  try {
+    console.log('[Egitimlerim] Sayfa URL ile yükleniyor: ' + window.location.pathname);
+    
+    // Sayfa yüklenirken sorun olmaması için LocalStorage kontrolü
+    const storedUser = localStorage.getItem('cyberly_user');
+    if (!storedUser) {
+      console.log('[Egitimlerim] Kullanıcı bulunamadı, giriş sayfasına yönlendiriliyor');
+      window.location.replace('http://localhost:3000/giris?callbackUrl=/egitimlerim');
+    } else {
+      console.log('[Egitimlerim] Kullanıcı bulundu, sayfa yükleniyor');
+    }
+  } catch (e) {
+    console.error('[Egitimlerim] Hata:', e);
+  }
+}
+
 interface Course {
   id: string;
   title: string;
@@ -75,7 +93,7 @@ export default function CoursesPage() {
           setIsAuthorized(true);
         } else if (!loading && !user) {
           console.log('Eğitimlerim: Kullanıcı giriş yapmamış, yönlendiriliyor');
-          router.push('/giris?callbackUrl=' + encodeURIComponent('/egitimlerim'));
+          window.location.href = 'http://localhost:3000/giris?callbackUrl=' + encodeURIComponent('/egitimlerim');
         } else if (user) {
           setIsAuthorized(true);
         }
@@ -101,7 +119,7 @@ export default function CoursesPage() {
         <div className="text-center">
           <p className="text-xl text-gray-400 mb-4">Bu sayfayı görüntülemek için giriş yapmalısınız.</p>
           <button
-            onClick={() => router.push('/giris?callbackUrl=' + encodeURIComponent('/egitimlerim'))}
+            onClick={() => window.location.href = 'http://localhost:3000/giris?callbackUrl=' + encodeURIComponent('/egitimlerim')}
             className="px-4 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 transition-colors"
           >
             Giriş Yap

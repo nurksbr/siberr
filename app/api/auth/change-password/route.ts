@@ -1,64 +1,78 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import prisma from '@/app/lib/prisma';
-import bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
+import { z } from 'zod';
+
+// Şifre değiştirme şeması
+const changePasswordSchema = z.object({
+  currentPassword: z.string(),
+  newPassword: z
+    .string()
+    .min(8, { message: 'Şifre en az 8 karakter olmalıdır' })
+    .regex(/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/, {
+      message: 'Şifre en az bir büyük harf, bir küçük harf ve bir rakam içermelidir',
+    })
+});
 
 // POST /api/auth/change-password
 export async function POST(request: NextRequest) {
   try {
-    // Get the current session to verify the user
+    // Oturumu kontrol et
     const session = await getServerSession();
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Oturum açmanız gerekiyor' }, { status: 401 });
     }
     
-    // Get the current user
-    const currentUser = await prisma.user.findUnique({
+    // İsteği doğrula
+    const body = await request.json();
+    
+    const result = changePasswordSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: 'Doğrulama hatası', issues: result.error.issues },
+        { status: 400 }
+      );
+    }
+    
+    const { currentPassword, newPassword } = result.data;
+    
+    // Kullanıcıyı bul
+    const user = await prisma.user.findUnique({
       where: { email: session.user.email as string },
-      select: {
-        id: true,
-        password: true,
-      },
     });
     
-    if (!currentUser) {
+    if (!user) {
       return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 });
     }
     
-    // Get the request body
-    const { currentPassword, newPassword } = await request.json();
-    
-    // Validate input
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: 'Mevcut şifre ve yeni şifre gereklidir' }, { status: 400 });
-    }
-    
-    if (newPassword.length < 8) {
-      return NextResponse.json({ error: 'Yeni şifre en az 8 karakter uzunluğunda olmalıdır' }, { status: 400 });
-    }
-    
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(currentPassword, currentUser.password);
+    // Mevcut şifreyi kontrol et
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     
     if (!isPasswordValid) {
       return NextResponse.json({ error: 'Mevcut şifre yanlış' }, { status: 400 });
     }
     
-    // Hash the new password
+    // Şifreleri karşılaştır (aynı şifreyi tekrar kullanmayı engelle)
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    
+    if (isSamePassword) {
+      return NextResponse.json({ error: 'Yeni şifre mevcut şifreyle aynı olamaz' }, { status: 400 });
+    }
+    
+    // Yeni şifreyi hashle
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     
-    // Update the user's password
+    // Kullanıcının şifresini güncelle
     await prisma.user.update({
-      where: { id: currentUser.id },
+      where: { id: user.id },
       data: { password: hashedPassword },
     });
     
-    return NextResponse.json({
-      message: 'Şifre başarıyla güncellendi',
-    });
+    return NextResponse.json({ message: 'Şifre başarıyla güncellendi' });
   } catch (error) {
     console.error('Şifre değiştirme hatası:', error);
-    return NextResponse.json({ error: 'Şifre değiştirilemedi' }, { status: 500 });
+    return NextResponse.json({ error: 'Şifre değiştirilirken bir hata oluştu' }, { status: 500 });
   }
 }

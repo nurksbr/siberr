@@ -1,69 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { verify } from 'jsonwebtoken';
+import { getServerSession } from 'next-auth/next';
+import prisma from '@/app/lib/prisma';
 
-const prisma = new PrismaClient();
-
-// Kullanıcı kimlik doğrulama işlevi
-async function authenticateUser(request: NextRequest) {
-  const token = request.cookies.get('auth_token')?.value;
-  
-  if (!token) {
-    return null;
-  }
-  
-  try {
-    const decoded = verify(token, process.env.JWT_SECRET || 'fallback_secret') as { userId: string };
-    return decoded;
-  } catch (error) {
-    return null;
-  }
-}
-
-// 2FA durum kontrolü API endpoint'i
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
+    // Oturum kontrolü
+    const session = await getServerSession();
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Oturum açmanız gerekiyor' }, { status: 401 });
+    }
+    
+    // URL'den userId'yi al veya oturumdaki kullanıcıyı kullan
+    const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     
-    // Kullanıcı kimlik doğrulama
-    const decodedToken = await authenticateUser(request);
-    if (!decodedToken) {
-      return NextResponse.json(
-        { error: 'Kimlik doğrulama gerekli' },
-        { status: 401 }
-      );
+    // Eğer userId yoksa veya yetki kontrolü gerekiyorsa
+    if (!userId) {
+      return NextResponse.json({ error: 'Kullanıcı ID'si gerekli' }, { status: 400 });
     }
     
-    // Sadece kullanıcının kendi 2FA durumunu kontrol etmesine izin ver
-    if (decodedToken.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Bu işlem için yetkiniz bulunmuyor' },
-        { status: 403 }
-      );
-    }
-    
-    // Kullanıcı 2FA durumunu kontrol et
+    // Kullanıcıyı ve 2FA durumunu kontrol et
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { twoFactorEnabled: true }
+      select: {
+        id: true,
+        twoFactorEnabled: true,
+        email: true,
+      }
     });
     
     if (!user) {
-      return NextResponse.json(
-        { error: 'Kullanıcı bulunamadı' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Kullanıcı bulunamadı' }, { status: 404 });
     }
     
-    return NextResponse.json({ twoFactorEnabled: user.twoFactorEnabled });
+    // Yetki kontrolü - kullanıcı kendisi mi yoksa admin mi?
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email as string },
+      select: { id: true, role: true }
+    });
+    
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Oturum açan kullanıcı bulunamadı' }, { status: 401 });
+    }
+    
+    // Sadece kendisi veya admin erişim sağlayabilir
+    if (currentUser.id !== userId && currentUser.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Bu bilgiye erişim yetkiniz yok' }, { status: 403 });
+    }
+    
+    // 2FA durumunu döndür
+    return NextResponse.json({
+      userId: user.id,
+      twoFactorEnabled: user.twoFactorEnabled || false
+    });
   } catch (error) {
     console.error('2FA durum kontrolü hatası:', error);
-    return NextResponse.json(
-      { error: 'İki faktörlü kimlik doğrulama durumu kontrol edilirken bir hata oluştu' },
-      { status: 500 }
-    );
-  } finally {
-    await prisma.$disconnect();
+    return NextResponse.json({ error: '2FA durumu kontrol edilirken bir hata oluştu' }, { status: 500 });
   }
-} 
+}

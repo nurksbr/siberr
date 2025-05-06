@@ -3,7 +3,7 @@
 import { useState, useEffect, useReducer } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
 import { AUTH_CHANGE_EVENT } from '../context/AuthContext'
 import UserMenu from './UserMenu'
@@ -24,8 +24,8 @@ const NAV_LINKS = [
 
 // Kullanıcı giriş yaptıysa görünecek linkler
 const USER_LINKS = [
-  { name: 'Profil', path: '/profil', icon: <FaUserShield className="inline-block mr-1" /> },
-  { name: 'Eğitimlerim', path: '/egitimlerim' },
+  // { name: 'Profil', path: '/profil', icon: <FaUserShield className="inline-block mr-1" /> },
+  // { name: 'Eğitimlerim', path: '/egitimlerim' },
 ]
 
 function Navbar() {
@@ -43,6 +43,8 @@ function Navbar() {
   
   // SSR/CSR uyumsuzluğunu engellemek için kullanacağımız bir bayrak
   const [isMounted, setIsMounted] = useState(false);
+  
+  const router = useRouter();
   
   // Bileşen mount edildikten sonra isLoggedIn durumunu kontrol et
   useEffect(() => {
@@ -192,7 +194,7 @@ function Navbar() {
   const handleMobileNavigation = (path) => (e) => {
     e.preventDefault();
     setIsMenuOpen(false);
-    window.location.href = path;
+    router.push(path);
   };
 
   return (
@@ -266,7 +268,6 @@ function Navbar() {
                       }`}
                     >
                       <span className="flex items-center">
-                        {link.icon ? link.icon : null}
                         {link.name}
                       </span>
                     </Link>
@@ -382,7 +383,6 @@ function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <span className="flex items-center">
-                      {link.icon ? link.icon : null}
                       {link.name}
                     </span>
                   </Link>
@@ -418,12 +418,6 @@ function Navbar() {
                   </div>
                   <button 
                     className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
-                    onClick={handleMobileNavigation('/profil')}
-                  >
-                    Profil
-                  </button>
-                  <button 
-                    className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
                     onClick={handleMobileNavigation('/ayarlar')}
                   >
                     Ayarlar
@@ -431,7 +425,7 @@ function Navbar() {
                   {currentUser?.role === 'ADMIN' && (
                     <button 
                       className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
-                      onClick={handleMobileNavigation('/profil')}
+                      onClick={handleMobileNavigation('/profilim')}
                     >
                       Yönetim Paneli
                     </button>
