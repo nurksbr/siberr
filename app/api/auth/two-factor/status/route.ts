@@ -58,4 +58,4 @@ export async function GET(request: NextRequest) {
     console.error('2FA durum kontrolü hatası:', error);
     return NextResponse.json({ error: '2FA durumu kontrol edilirken bir hata oluştu' }, { status: 500 });
   }
-}
+} 

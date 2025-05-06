@@ -24,8 +24,8 @@ const NAV_LINKS = [
 
 // Kullanıcı giriş yaptıysa görünecek linkler
 const USER_LINKS = [
-  // { name: 'Profil', path: '/profil', icon: <FaUserShield className="inline-block mr-1" /> },
-  // { name: 'Eğitimlerim', path: '/egitimlerim' },
+  { name: 'Profilim', path: '/profilim', icon: <FaUserShield className="inline-block mr-1" /> },
+  { name: 'Eğitimlerim', path: '/egitimlerim', icon: <FaGraduationCap className="inline-block mr-1" /> },
 ]
 
 function Navbar() {
@@ -185,7 +185,7 @@ function Navbar() {
       await logout();
       setIsMenuOpen(false);
       setIsLoggedIn(false);
-      window.location.href = '/';
+      router.push('/');
     } catch (error) {
       console.error('Çıkış yapılırken hata:', error);
     }
@@ -194,7 +194,10 @@ function Navbar() {
   const handleMobileNavigation = (path) => (e) => {
     e.preventDefault();
     setIsMenuOpen(false);
-    router.push(path);
+    console.log(`Navbar: ${path} adresine yönlendiriliyor...`);
+    setTimeout(() => {
+      router.push(path);
+    }, 100);
   };
 
   return (
@@ -268,6 +271,7 @@ function Navbar() {
                       }`}
                     >
                       <span className="flex items-center">
+                        {link.icon}
                         {link.name}
                       </span>
                     </Link>
@@ -383,6 +387,7 @@ function Navbar() {
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <span className="flex items-center">
+                      {link.icon}
                       {link.name}
                     </span>
                   </Link>
@@ -425,11 +430,17 @@ function Navbar() {
                   {currentUser?.role === 'ADMIN' && (
                     <button 
                       className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
-                      onClick={handleMobileNavigation('/profilim')}
+                      onClick={handleMobileNavigation('/admin-panel')}
                     >
                       Yönetim Paneli
                     </button>
                   )}
+                  <button 
+                    className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold hover:bg-gray-800/30 hover:text-cyan-400 transition-colors"
+                    onClick={handleMobileNavigation('/profilim')}
+                  >
+                    Profilim
+                  </button>
                   <button
                     className="flex items-center w-full text-left px-2 py-1 rounded-md text-sm font-semibold text-red-400 hover:bg-gray-800/30 transition-colors"
                     onClick={handleLogout}

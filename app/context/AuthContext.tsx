@@ -271,12 +271,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (callbackUrl) {
           console.log(`Callback URL'e yönlendiriliyor: ${callbackUrl}`);
-          // Sayfayı tamamen yenile
-          window.location.href = decodeURIComponent(callbackUrl);
+          router.push(decodeURIComponent(callbackUrl));
         } else {
-          // Ana sayfaya yönlendir - tamamen sayfa yenilemesi ile
+          // Ana sayfaya yönlendir
           console.log('Kullanıcı giriş yaptı, ana sayfaya yönlendiriliyor');
-          window.location.href = '/';
+          router.push('/');
         }
       } else {
         // Oturum durumunu kontrol et

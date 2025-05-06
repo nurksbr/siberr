@@ -110,6 +110,17 @@ export default function UserMenu() {
   // Dışarıya tıklandığında menüyü kapat
   useClickOutside(ref, () => setIsOpen(false));
 
+  // Sayfa değişikliği için navigation işlevi
+  const handleNavigation = (path) => {
+    setIsOpen(false);
+    // Eski implementasyonda boş path sorunu olabilir, direkt konsola yazalım
+    console.log(`UserMenu: ${path} adresine yönlendiriliyor...`);
+    // Yönlendirme yapmadan önce bir kısa gecikme ekleyelim
+    setTimeout(() => {
+      router.push(path);
+    }, 100);
+  };
+
   // Çıkış işlemi ve ana sayfaya yönlendirme
   const handleLogout = async () => {
     try {
@@ -123,8 +134,8 @@ export default function UserMenu() {
       // Menüyü kapat
       setIsOpen(false);
       
-      // Ana sayfaya doğrudan yönlendir
-      window.location.href = '/';
+      // Ana sayfaya Next.js router ile yönlendir
+      router.push('/');
     } catch (error) {
       console.error('Çıkış yaparken hata:', error);
     }
@@ -200,36 +211,7 @@ export default function UserMenu() {
             <div className="py-1" role="menu" aria-orientation="vertical" aria-labelledby="user-menu-button">
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => { 
-                  setIsOpen(false); // Menüyü kapat
-                  // Doğrudan tam URL'ye yönlendir
-                  window.location.href = 'http://localhost:3000/profilim'; 
-                }}
-                role="menuitem"
-              >
-                <FaUserCog className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />
-                Profilim
-              </button>
-              
-              <button
-                className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => { 
-                  setIsOpen(false); // Menüyü kapat
-                  // Doğrudan tam URL'ye yönlendir
-                  window.location.href = 'http://localhost:3000/egitimlerim'; 
-                }}
-                role="menuitem"
-              >
-                <FaChartBar className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />
-                Eğitimlerim
-              </button>
-              
-              <button
-                className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => { 
-                  setIsOpen(false); // Menüyü kapat
-                  window.location.href = 'http://localhost:3000/ayarlar'; 
-                }}
+                onClick={() => handleNavigation('/ayarlar')}
                 role="menuitem"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -241,10 +223,7 @@ export default function UserMenu() {
               
               <button
                 className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                onClick={() => { 
-                  setIsOpen(false); // Menüyü kapat
-                  window.location.href = 'http://localhost:3000/bildirimler'; 
-                }}
+                onClick={() => handleNavigation('/bildirimler')}
                 role="menuitem"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -259,10 +238,7 @@ export default function UserMenu() {
               <div className="py-1">
                 <button
                   className="group flex items-center w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-700"
-                  onClick={() => { 
-                    setIsOpen(false); // Menüyü kapat
-                    window.location.href = 'http://localhost:3000/admin-panel'; 
-                  }}
+                  onClick={() => handleNavigation('/admin-panel')}
                   role="menuitem"
                 >
                   <FaShieldAlt className="h-5 w-5 mr-3 text-gray-400 group-hover:text-cyan-400" />

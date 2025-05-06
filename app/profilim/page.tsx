@@ -17,7 +17,10 @@ if (typeof window !== 'undefined') {
     const storedUser = localStorage.getItem('cyberly_user');
     if (!storedUser) {
       console.log('[Profilim] Kullanıcı bulunamadı, giriş sayfasına yönlendiriliyor');
-      window.location.replace('http://localhost:3000/giris?callbackUrl=/profilim');
+      // Router burada kullanamıyoruz çünkü henüz bileşen yüklenmedi
+      setTimeout(() => {
+        window.location.href = '/giris?callbackUrl=/profilim';
+      }, 100);
     } else {
       console.log('[Profilim] Kullanıcı bulundu, sayfa yükleniyor');
     }
@@ -123,7 +126,7 @@ export default function ProfilPage() {
         // Her iki kaynakta da kullanıcı yoksa ve yükleme tamamlandıysa giriş sayfasına yönlendir
         if (!loading) {
           console.log('Kullanıcı bulunamadı, giriş sayfasına yönlendiriliyor');
-          window.location.href = '/giris?callbackUrl=/profilim';
+          router.push('/giris?callbackUrl=/profilim');
         }
       } catch (error) {
         console.error('Profil sayfası yüklenirken hata:', error);
